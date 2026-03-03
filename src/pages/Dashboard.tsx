@@ -9,6 +9,13 @@ import type { Order, OrderStatus } from '../types/order'
 export function Dashboard() {
   const location = useLocation()
   const [orders, setOrders] = useState<Order[]>([])
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [phoneSearch, setPhoneSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [deleteConfirm, setDeleteConfirm] = useState<Order | null>(null)
   const [showCreatedNotice, setShowCreatedNotice] = useState(false)
 
   useEffect(() => {
@@ -19,12 +26,6 @@ export function Dashboard() {
       return () => clearTimeout(t)
     }
   }, [location.state?.orderCreated, location.pathname])
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [deleteConfirm, setDeleteConfirm] = useState<Order | null>(null)
 
   useEffect(() => {
     loadOrders()
@@ -38,9 +39,13 @@ export function Dashboard() {
       result = result.filter(
         (o) =>
           o.full_name.toLowerCase().includes(q) ||
-          (o.phone && o.phone.includes(q)) ||
-          o.car_model.toLowerCase().includes(q)
+          o.car_model.toLowerCase().includes(q),
       )
+    }
+
+    if (phoneSearch.trim()) {
+      const p = phoneSearch.replace(/\s+/g, '')
+      result = result.filter((o) => (o.phone || '').replace(/\s+/g, '').includes(p))
     }
 
     if (statusFilter !== 'all') {
@@ -83,6 +88,55 @@ export function Dashboard() {
     }
   }
 
+  async function handleRepeat(order: Order) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          full_name: order.full_name,
+          phone: order.phone,
+          car_model: order.car_model,
+          engine: order.engine,
+          parts: order.parts,
+          total_price: order.total_price,
+          status: 'new',
+        })
+        .select('*')
+        .single()
+
+      if (error) throw error
+      if (data) {
+        setOrders((prev) => [data as Order, ...prev])
+      }
+    } catch (err) {
+      console.error('Ошибка повтора заказа:', err)
+    }
+  }
+
+  async function handleStatusChange(order: Order, status: OrderStatus) {
+    const prevStatus = order.status
+    setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status } : o)))
+
+    try {
+      const { error } = await supabase.from('orders').update({ status }).eq('id', order.id)
+      if (error) throw error
+    } catch (err) {
+      console.error('Ошибка обновления статуса:', err)
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: prevStatus } : o)))
+    }
+  }
+
+  function handlePhoneClick(phone: string | null) {
+    if (!phone) return
+    setPhoneSearch(phone)
+  }
+
   const todayStart = startOfDay(new Date()).toISOString()
   const todayOrders = orders.filter((o) => o.created_at >= todayStart)
   const todayCount = todayOrders.length
@@ -93,11 +147,9 @@ export function Dashboard() {
       <Navbar />
       <main className="max-w-6xl mx-auto px-4 py-6">
         {showCreatedNotice && (
-          <div className="mb-4 p-4 bg-green-50 text-green-800 rounded-lg font-medium">
-            Заказ создан
-          </div>
+          <div className="mb-4 p-4 bg-green-50 text-green-800 rounded-lg font-medium">Заказ создан</div>
         )}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <h1 className="text-2xl font-bold text-gray-800">Заказы</h1>
           <Link
             to="/orders/new"
@@ -105,6 +157,61 @@ export function Dashboard() {
           >
             Создать заказ
           </Link>
+        </div>
+
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              if (!filteredOrders.length) return
+              const header = [
+                'Номер заказа',
+                'Дата',
+                'ФИО',
+                'Телефон',
+                'Машина',
+                'Двигатель',
+                'Запчасти',
+                'Стоимость',
+                'Статус',
+              ]
+              const rows = filteredOrders.map((o) => [
+                o.order_number,
+                o.created_at,
+                o.full_name.replace(/\r?\n/g, ' '),
+                o.phone || '',
+                o.car_model.replace(/\r?\n/g, ' '),
+                o.engine?.replace(/\r?\n/g, ' ') || '',
+                o.parts.replace(/\r?\n/g, ' '),
+                o.total_price,
+                o.status,
+              ])
+              const csvLines = [header, ...rows]
+                .map((row) =>
+                  row
+                    .map((cell) => {
+                      const text = String(cell ?? '')
+                      if (text.includes(';') || text.includes('"') || text.includes('\n')) {
+                        return `"${text.replace(/"/g, '""')}"`
+                      }
+                      return text
+                    })
+                    .join(';'),
+                )
+                .join('\n')
+
+              const blob = new Blob([csvLines], { type: 'text/csv;charset=utf-8;' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`
+              a.click()
+              URL.revokeObjectURL(url)
+            }}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Экспорт в Excel (CSV)
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -129,6 +236,13 @@ export function Dashboard() {
               placeholder="Поиск по ФИО, телефону, машине..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Поиск по телефону..."
+              value={phoneSearch}
+              onChange={(e) => setPhoneSearch(e.target.value)}
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             <select
@@ -157,7 +271,13 @@ export function Dashboard() {
         {loading ? (
           <div className="text-center py-12 text-gray-500">Загрузка...</div>
         ) : (
-          <OrderTable orders={filteredOrders} onDelete={(o) => setDeleteConfirm(o)} />
+          <OrderTable
+            orders={filteredOrders}
+            onDelete={(o) => setDeleteConfirm(o)}
+            onRepeat={handleRepeat}
+            onStatusChange={handleStatusChange}
+            onPhoneClick={handlePhoneClick}
+          />
         )}
       </main>
 
