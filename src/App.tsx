@@ -6,6 +6,7 @@ import { Register } from './pages/Register'
 import { Dashboard } from './pages/Dashboard'
 import { OrderForm } from './pages/OrderForm'
 import { EditOrder } from './pages/EditOrder'
+import { PrintOrder } from './pages/PrintOrder'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -66,6 +67,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <EditOrder />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders/:id/print"
+          element={
+            <ProtectedRoute>
+              <PrintOrder />
             </ProtectedRoute>
           }
         />

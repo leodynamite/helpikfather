@@ -3,7 +3,6 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { Order, OrderStatus } from '../types/order'
 import { StatusBadge } from './StatusBadge'
-import { generateOrderPdf } from '../utils/generatePdf'
 
 interface OrderTableProps {
   orders: Order[]
@@ -14,10 +13,6 @@ interface OrderTableProps {
 }
 
 export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhoneClick }: OrderTableProps) {
-  function handlePrint(order: Order) {
-    generateOrderPdf(order)
-  }
-
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
       <table className="min-w-full divide-y divide-gray-200">
@@ -81,10 +76,10 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhone
                     Повторить
                   </button>
                   <button
-                    onClick={() => handlePrint(order)}
+                    onClick={() => window.open(`/orders/${order.id}/print`, '_blank')}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
                   >
-                    PDF
+                    Печать
                   </button>
                   <Link
                     to={`/orders/${order.id}/edit`}
