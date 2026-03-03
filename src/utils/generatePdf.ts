@@ -62,5 +62,5 @@ export function generateOrderPdf(order: Order): void {
   y += lineHeight + 3
   doc.text('Подпись менеджера: _________________________', margin, y)
 
-  doc.save(`order-${order.order_number}.pdf`)
+  doc.save(`order-${order.order_number}-partsdesk.pdf`)
 }
