@@ -17,7 +17,7 @@ export function Navbar() {
     <nav className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link to="/" className="text-xl font-bold text-gray-800 hover:text-gray-600">
+          <Link to="/app" className="text-xl font-bold text-gray-800 hover:text-gray-600">
             PartsDesk
           </Link>
           <Link to="/settings" className="text-sm text-gray-600 hover:text-gray-900">

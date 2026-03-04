@@ -8,6 +8,7 @@ import { OrderForm } from './pages/OrderForm'
 import { EditOrder } from './pages/EditOrder'
 import { PrintOrder } from './pages/PrintOrder'
 import { Settings } from './pages/Settings'
+import { Landing } from './pages/Landing'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -48,7 +49,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
-          path="/"
+          path="/app"
           element={
             <ProtectedRoute>
               <Dashboard />
@@ -87,6 +88,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/" element={<Landing />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

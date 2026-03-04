@@ -74,7 +74,7 @@ export function EditOrder() {
         .eq('id', id)
 
       if (error) throw error
-      navigate('/')
+      navigate('/app')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения')
     } finally {
@@ -206,7 +206,7 @@ export function EditOrder() {
           <div className="mt-6 flex gap-3">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/app')}
               className="px-5 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
             >
               Отмена

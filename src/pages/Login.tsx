@@ -17,7 +17,7 @@ export function Login() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      navigate('/')
+      navigate('/app')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка входа')
     } finally {
