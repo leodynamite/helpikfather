@@ -31,3 +31,25 @@ using (auth.uid() = user_id);
 create policy "Users can delete own orders"
 on orders for delete
 using (auth.uid() = user_id);
+
+-- Настройки магазина для пользователя
+create table if not exists user_settings (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users not null unique,
+  shop_name text,
+  shop_address text,
+  shop_phone text,
+  executor_name text
+);
+
+alter table user_settings enable row level security;
+
+create policy "Users can view own settings"
+on user_settings for select
+using (auth.uid() = user_id);
+
+create policy "Users can upsert own settings"
+on user_settings for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+

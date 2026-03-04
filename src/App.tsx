@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard'
 import { OrderForm } from './pages/OrderForm'
 import { EditOrder } from './pages/EditOrder'
 import { PrintOrder } from './pages/PrintOrder'
+import { Settings } from './pages/Settings'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -75,6 +76,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PrintOrder />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />
