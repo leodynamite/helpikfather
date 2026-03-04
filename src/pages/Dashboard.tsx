@@ -141,6 +141,28 @@ export function Dashboard() {
   const todayOrders = orders.filter((o) => o.created_at >= todayStart)
   const todayCount = todayOrders.length
   const totalSum = orders.reduce((s, o) => s + Number(o.total_price), 0)
+  const totalDebt = orders.reduce(
+    (s, o) => s + Math.max(Number(o.total_price || 0) - Number(o.paid_amount || 0), 0),
+    0,
+  )
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const awaitingToday = orders.filter(
+    (o) =>
+      o.expected_date &&
+      o.expected_date.slice(0, 10) === todayStr &&
+      o.status !== 'completed' &&
+      o.status !== 'cancelled',
+  )
+  const overdue = orders.filter((o) => {
+    if (!o.expected_date) return false
+    const d = o.expected_date.slice(0, 10)
+    return (
+      d < todayStr &&
+      o.status !== 'completed' &&
+      o.status !== 'cancelled'
+    )
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -214,7 +236,7 @@ export function Dashboard() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-500">Сегодня заказов</p>
             <p className="text-2xl font-bold text-gray-800">{todayCount}</p>
@@ -226,6 +248,21 @@ export function Dashboard() {
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-500">Сумма</p>
             <p className="text-2xl font-bold text-gray-800">{totalSum.toLocaleString('ru-RU')} ₽</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <p className="text-sm text-gray-500">Долг</p>
+            <p className="text-2xl font-bold text-red-600">{totalDebt.toLocaleString('ru-RU')} ₽</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <div className="bg-white rounded-lg border border-amber-200 p-4">
+            <p className="text-sm text-gray-500">Ожидают поставки сегодня</p>
+            <p className="text-xl font-semibold text-gray-800">{awaitingToday.length}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-red-200 p-4">
+            <p className="text-sm text-gray-500">Просроченные заказы</p>
+            <p className="text-xl font-semibold text-red-600">{overdue.length}</p>
           </div>
         </div>
 

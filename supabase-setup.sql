@@ -10,6 +10,11 @@ create table orders (
   engine text,
   parts text not null,
   total_price numeric not null,
+  paid_amount numeric default 0 not null,
+  expected_date date,
+  reminder_note text,
+  vin text,
+  photo_url text,
   status text default 'new'
 );
 

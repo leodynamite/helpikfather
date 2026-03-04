@@ -24,14 +24,21 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhone
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Телефон</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Машина</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Сумма</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Оплачено</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Долг</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Действия</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {orders.map((order) => (
-            <tr key={order.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 text-sm font-medium text-gray-900">{order.order_number}</td>
+          {orders.map((order) => {
+            const total = Number(order.total_price || 0)
+            const paid = Number(order.paid_amount || 0)
+            const debt = Math.max(total - paid, 0)
+
+            return (
+              <tr key={order.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 text-sm font-medium text-gray-900">{order.order_number}</td>
               <td className="px-4 py-3 text-sm text-gray-600">
                 {format(new Date(order.created_at), 'dd.MM.yyyy', { locale: ru })}
               </td>
@@ -49,9 +56,19 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhone
                   '—'
                 )}
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600">{order.car_model}</td>
-              <td className="px-4 py-3 text-sm font-medium text-gray-900">{order.total_price} ₽</td>
-              <td className="px-4 py-3">
+                <td className="px-4 py-3 text-sm text-gray-600">{order.car_model}</td>
+                <td className="px-4 py-3 text-sm font-medium text-gray-900">{total} ₽</td>
+                <td className="px-4 py-3 text-sm text-gray-700">{paid} ₽</td>
+                <td className="px-4 py-3 text-sm">
+                  {debt > 0 ? (
+                    <span className="font-semibold text-red-600">{debt} ₽</span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+                      Оплачено
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <StatusBadge status={order.status} />
                   <select
@@ -67,7 +84,7 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhone
                   </select>
                 </div>
               </td>
-              <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right">
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => onRepeat(order)}
@@ -94,9 +111,10 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhone
                     Удалить
                   </button>
                 </div>
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
       {orders.length === 0 && (

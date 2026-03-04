@@ -11,6 +11,11 @@ export interface Order {
   engine: string | null
   parts: string
   total_price: number
+  paid_amount: number
+  expected_date: string | null
+  reminder_note: string | null
+  vin: string | null
+  photo_url: string | null
   status: OrderStatus
 }
 
@@ -22,6 +27,11 @@ export interface OrderInsert {
   engine?: string
   parts: string
   total_price: number
+  paid_amount?: number
+  expected_date?: string | null
+  reminder_note?: string | null
+  vin?: string | null
+  photo_url?: string | null
   status?: OrderStatus
 }
 
@@ -32,5 +42,10 @@ export interface OrderUpdate {
   engine?: string
   parts?: string
   total_price?: number
+  paid_amount?: number
+  expected_date?: string | null
+  reminder_note?: string | null
+  vin?: string | null
+  photo_url?: string | null
   status?: OrderStatus
 }
