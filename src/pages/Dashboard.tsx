@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { startOfDay } from 'date-fns'
 import { supabase } from '../lib/supabaseClient'
 import { Navbar } from '../components/Navbar'
@@ -8,6 +8,7 @@ import type { Order, OrderStatus } from '../types/order'
 
 export function Dashboard() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -17,6 +18,13 @@ export function Dashboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [deleteConfirm, setDeleteConfirm] = useState<Order | null>(null)
   const [showCreatedNotice, setShowCreatedNotice] = useState(false)
+  const [showQuick, setShowQuick] = useState(false)
+  const [quickPhone, setQuickPhone] = useState('')
+  const [quickCar, setQuickCar] = useState('')
+  const [quickParts, setQuickParts] = useState('')
+  const [quickSum, setQuickSum] = useState('')
+  const [quickError, setQuickError] = useState<string | null>(null)
+  const [quickLoading, setQuickLoading] = useState(false)
 
   useEffect(() => {
     if (location.state?.orderCreated) {
@@ -26,6 +34,15 @@ export function Dashboard() {
       return () => clearTimeout(t)
     }
   }, [location.state?.orderCreated, location.pathname])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('quick') === '1') {
+      setShowQuick(true)
+      // убираем параметр из адресной строки
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location.search, location.pathname, navigate])
 
   useEffect(() => {
     loadOrders()
@@ -331,6 +348,122 @@ export function Dashboard() {
                 className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
               >
                 Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showQuick && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-5">
+            <h2 className="text-lg font-semibold text-gray-800 mb-3">Быстрый заказ</h2>
+            {quickError && (
+              <div className="mb-3 p-2 text-sm bg-red-50 text-red-700 rounded-lg">
+                {quickError}
+              </div>
+            )}
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
+                <input
+                  type="tel"
+                  value={quickPhone}
+                  onChange={(e) => setQuickPhone(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Машина</label>
+                <input
+                  type="text"
+                  value={quickCar}
+                  onChange={(e) => setQuickCar(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Запчасти</label>
+                <textarea
+                  rows={2}
+                  value={quickParts}
+                  onChange={(e) => setQuickParts(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Сумма</label>
+                <input
+                  type="text"
+                  value={quickSum}
+                  onChange={(e) => setQuickSum(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuick(false)
+                  setQuickError(null)
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex-1"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={quickLoading}
+                onClick={async () => {
+                  setQuickError(null)
+                  const sum = quickSum.trim()
+                    ? parseFloat(quickSum.replace(',', '.'))
+                    : 0
+                  if (isNaN(sum) || sum < 0) {
+                    setQuickError('Введите корректную сумму')
+                    return
+                  }
+                  try {
+                    setQuickLoading(true)
+                    const {
+                      data: { user },
+                    } = await supabase.auth.getUser()
+                    if (!user) throw new Error('Не авторизован')
+                    const { data, error } = await supabase
+                      .from('orders')
+                      .insert({
+                        user_id: user.id,
+                        full_name: quickPhone || 'Клиент',
+                        phone: quickPhone || null,
+                        car_model: quickCar || '',
+                        engine: null,
+                        parts: quickParts || '',
+                        total_price: sum,
+                        paid_amount: 0,
+                        status: 'new',
+                      })
+                      .select('*')
+                      .single()
+                    if (error) throw error
+                    if (data) {
+                      setOrders((prev) => [data as Order, ...prev])
+                    }
+                    setShowQuick(false)
+                    setQuickPhone('')
+                    setQuickCar('')
+                    setQuickParts('')
+                    setQuickSum('')
+                  } catch (err) {
+                    setQuickError(err instanceof Error ? err.message : 'Ошибка быстрого заказа')
+                  } finally {
+                    setQuickLoading(false)
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex-1"
+              >
+                {quickLoading ? 'Сохранение...' : 'Сохранить'}
               </button>
             </div>
           </div>

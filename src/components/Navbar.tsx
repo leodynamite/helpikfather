@@ -20,16 +20,30 @@ export function Navbar() {
           <Link to="/app" className="text-xl font-bold text-gray-800 hover:text-gray-600">
             PartsDesk
           </Link>
+          <Link to="/pipeline" className="text-sm text-gray-600 hover:text-gray-900">
+            Воронка
+          </Link>
+          <Link to="/analytics" className="text-sm text-gray-600 hover:text-gray-900">
+            Аналитика
+          </Link>
           <Link to="/settings" className="text-sm text-gray-600 hover:text-gray-900">
             Настройки
           </Link>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-        >
-          Выйти
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/app?quick=1"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Быстрый заказ
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Выйти
+          </button>
+        </div>
       </div>
     </nav>
   )
