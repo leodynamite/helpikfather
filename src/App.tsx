@@ -10,6 +10,7 @@ import { PrintOrder } from './pages/PrintOrder'
 import { Settings } from './pages/Settings'
 import { Landing } from './pages/Landing'
 import { Customer } from './pages/Customer'
+import { Pipeline } from './pages/Pipeline'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -94,6 +95,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Customer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pipeline"
+          element={
+            <ProtectedRoute>
+              <Pipeline />
             </ProtectedRoute>
           }
         />
