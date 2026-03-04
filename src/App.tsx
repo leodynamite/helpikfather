@@ -9,6 +9,7 @@ import { EditOrder } from './pages/EditOrder'
 import { PrintOrder } from './pages/PrintOrder'
 import { Settings } from './pages/Settings'
 import { Landing } from './pages/Landing'
+import { Customer } from './pages/Customer'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -85,6 +86,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/:phone"
+          element={
+            <ProtectedRoute>
+              <Customer />
             </ProtectedRoute>
           }
         />

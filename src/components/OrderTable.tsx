@@ -9,10 +9,9 @@ interface OrderTableProps {
   onDelete: (order: Order) => void
   onRepeat: (order: Order) => void
   onStatusChange: (order: Order, status: OrderStatus) => void
-  onPhoneClick?: (phone: string | null) => void
 }
 
-export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhoneClick }: OrderTableProps) {
+export function OrderTable({ orders, onDelete, onRepeat, onStatusChange }: OrderTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
       <table className="min-w-full divide-y divide-gray-200">
@@ -45,13 +44,12 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange, onPhone
               <td className="px-4 py-3 text-sm text-gray-900">{order.full_name}</td>
               <td className="px-4 py-3 text-sm text-gray-600">
                 {order.phone ? (
-                  <button
-                    type="button"
-                    onClick={() => onPhoneClick?.(order.phone)}
+                  <Link
+                    to={`/customers/${encodeURIComponent(order.phone.replace(/\D/g, '') || order.phone)}`}
                     className="underline decoration-dotted decoration-gray-400 hover:decoration-blue-500 hover:text-blue-700"
                   >
                     {order.phone}
-                  </button>
+                  </Link>
                 ) : (
                   '—'
                 )}

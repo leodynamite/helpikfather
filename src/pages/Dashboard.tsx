@@ -132,11 +132,6 @@ export function Dashboard() {
     }
   }
 
-  function handlePhoneClick(phone: string | null) {
-    if (!phone) return
-    setPhoneSearch(phone)
-  }
-
   const todayStart = startOfDay(new Date()).toISOString()
   const todayOrders = orders.filter((o) => o.created_at >= todayStart)
   const todayCount = todayOrders.length
@@ -313,7 +308,6 @@ export function Dashboard() {
             onDelete={(o) => setDeleteConfirm(o)}
             onRepeat={handleRepeat}
             onStatusChange={handleStatusChange}
-            onPhoneClick={handlePhoneClick}
           />
         )}
       </main>
