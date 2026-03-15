@@ -1,4 +1,3 @@
--- Таблица заказов
 create table orders (
   id uuid default uuid_generate_v4() primary key,
   created_at timestamp default now(),
@@ -16,6 +15,63 @@ create table orders (
   vin text,
   photo_url text,
   status text default 'new'
+);
+
+-- Позиции в заказе
+create table if not exists order_items (
+  id uuid default uuid_generate_v4() primary key,
+  created_at timestamp default now(),
+  order_id uuid references orders on delete cascade not null,
+  item_name text not null,
+  quantity numeric not null default 1,
+  unit_price numeric not null,
+  line_total numeric not null
+);
+
+alter table order_items enable row level security;
+
+create policy "Users can view own order items"
+on order_items for select
+using (
+  exists (
+    select 1
+    from orders
+    where orders.id = order_items.order_id
+      and orders.user_id = auth.uid()
+  )
+);
+
+create policy "Users can insert own order items"
+on order_items for insert
+with check (
+  exists (
+    select 1
+    from orders
+    where orders.id = order_items.order_id
+      and orders.user_id = auth.uid()
+  )
+);
+
+create policy "Users can update own order items"
+on order_items for update
+using (
+  exists (
+    select 1
+    from orders
+    where orders.id = order_items.order_id
+      and orders.user_id = auth.uid()
+  )
+);
+
+create policy "Users can delete own order items"
+on order_items for delete
+using (
+  exists (
+    select 1
+    from orders
+    where orders.id = order_items.order_id
+      and orders.user_id = auth.uid()
+  )
 );
 
 -- Row Level Security

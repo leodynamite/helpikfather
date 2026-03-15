@@ -19,6 +19,24 @@ export interface Order {
   status: OrderStatus
 }
 
+export interface OrderItem {
+  id: string
+  created_at: string
+  order_id: string
+  item_name: string
+  quantity: number
+  unit_price: number
+  line_total: number
+}
+
+export interface OrderItemInsert {
+  order_id: string
+  item_name: string
+  quantity: number
+  unit_price: number
+  line_total: number
+}
+
 export interface OrderInsert {
   user_id: string
   full_name: string

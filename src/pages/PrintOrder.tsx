@@ -3,20 +3,25 @@ import { useParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { supabase } from '../lib/supabaseClient'
-import type { Order } from '../types/order'
+import type { Order, OrderItem } from '../types/order'
 import type { UserSettings } from '../types/userSettings'
 
 function OrderSlip({
   order,
+  items,
   copyLabel,
   settings,
 }: {
   order: Order
+  items: OrderItem[]
   copyLabel: string
   settings: UserSettings | null
 }) {
   const formattedDate = format(new Date(order.created_at), 'dd.MM.yyyy HH:mm', { locale: ru })
-  const total = Number(order.total_price).toLocaleString('ru-RU')
+  const itemsTotal = items.reduce((sum, it) => sum + Number(it.line_total || 0), 0)
+  const total = Number(order.total_price || itemsTotal).toLocaleString('ru-RU')
+  const paid = Number(order.paid_amount || 0)
+  const debt = Math.max(Number(order.total_price || itemsTotal) - paid, 0)
 
   const shopName = settings?.shop_name?.trim() || 'PartsDesk'
   const shopAddress =
@@ -61,22 +66,43 @@ function OrderSlip({
           </tr>
         </thead>
         <tbody>
-          <tr className="align-top">
-            <td className="border border-black px-1 py-0.5 align-top text-gray-500">—</td>
-            <td className="border border-black px-1 py-0.5 whitespace-pre-wrap">{order.parts}</td>
-            <td className="border border-black px-1 py-0.5 text-right">—</td>
-            <td className="border border-black px-1 py-0.5 text-right">—</td>
-            <td className="border border-black px-1 py-0.5 text-right">{total}</td>
-          </tr>
+          {items.length > 0 ? (
+            items.map((item) => (
+              <tr key={item.id} className="align-top">
+                <td className="border border-black px-1 py-0.5 align-top text-gray-500">—</td>
+                <td className="border border-black px-1 py-0.5 whitespace-pre-wrap">
+                  {item.item_name}
+                </td>
+                <td className="border border-black px-1 py-0.5 text-right">
+                  {Number(item.quantity)}
+                </td>
+                <td className="border border-black px-1 py-0.5 text-right">
+                  {Number(item.unit_price).toLocaleString('ru-RU')}
+                </td>
+                <td className="border border-black px-1 py-0.5 text-right">
+                  {Number(item.line_total).toLocaleString('ru-RU')}
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr className="align-top">
+              <td className="border border-black px-1 py-0.5 align-top text-gray-500">—</td>
+              <td className="border border-black px-1 py-0.5 whitespace-pre-wrap">{order.parts}</td>
+              <td className="border border-black px-1 py-0.5 text-right">—</td>
+              <td className="border border-black px-1 py-0.5 text-right">—</td>
+              <td className="border border-black px-1 py-0.5 text-right">{total}</td>
+            </tr>
+          )}
         </tbody>
       </table>
 
       <div className="flex justify-between text-[11px] mb-1">
         <div>
-          Оплачено: <span className="font-semibold">{total} р</span>
+          Оплачено: <span className="font-semibold">{paid.toLocaleString('ru-RU')} р</span>
         </div>
         <div>
-          Долг по оплате: <span className="font-semibold">0,00 р</span>
+          Долг по оплате:{' '}
+          <span className="font-semibold">{debt.toLocaleString('ru-RU')} р</span>
         </div>
       </div>
 
@@ -97,6 +123,7 @@ function OrderSlip({
 export function PrintOrder() {
   const { id } = useParams<{ id: string }>()
   const [order, setOrder] = useState<Order | null>(null)
+  const [items, setItems] = useState<OrderItem[]>([])
   const [error, setError] = useState<string | null>(null)
   const [settings, setSettings] = useState<UserSettings | null>(null)
 
@@ -112,14 +139,28 @@ export function PrintOrder() {
         if (userError) throw userError
         if (!user) throw new Error('Не авторизован')
 
-        const [{ data: orderData, error: orderError }, { data: settingsData, error: settingsError }] =
-          await Promise.all([
-            supabase.from('orders').select('*').eq('id', id).single(),
-            supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
-          ])
+        const [
+          { data: orderData, error: orderError },
+          { data: settingsData, error: settingsError },
+          { data: itemsData, error: itemsError },
+        ] = await Promise.all([
+          supabase.from('orders').select('*').eq('id', id).single(),
+          supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase
+            .from('order_items')
+            .select('*')
+            .eq('order_id', id)
+            .order('created_at', { ascending: true }),
+        ])
 
         if (orderError) throw orderError
         setOrder(orderData as Order)
+
+        if (itemsError) {
+          console.error('Ошибка загрузки позиций заказа для печати:', itemsError)
+        } else if (itemsData) {
+          setItems(itemsData as OrderItem[])
+        }
 
         if (settingsError) {
           // настройки не критичны для печати
@@ -162,8 +203,18 @@ export function PrintOrder() {
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="max-w-4xl mx-auto py-4 px-4 print:p-4 space-y-4">
-        <OrderSlip order={order} copyLabel="Экземпляр для клиента" settings={settings} />
-        <OrderSlip order={order} copyLabel="Экземпляр для магазина" settings={settings} />
+        <OrderSlip
+          order={order}
+          items={items}
+          copyLabel="Экземпляр для клиента"
+          settings={settings}
+        />
+        <OrderSlip
+          order={order}
+          items={items}
+          copyLabel="Экземпляр для магазина"
+          settings={settings}
+        />
       </div>
     </div>
   )

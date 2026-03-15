@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Navbar } from '../components/Navbar'
-import type { Order, OrderStatus } from '../types/order'
+import type { Order, OrderStatus, OrderItem, OrderItemInsert } from '../types/order'
 
 const STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'new', label: 'Новый' },
@@ -21,6 +21,9 @@ export function EditOrder() {
   const [carModel, setCarModel] = useState('')
   const [engine, setEngine] = useState('')
   const [parts, setParts] = useState('')
+  const [items, setItems] = useState<
+    { id?: string; item_name: string; quantity: string; unit_price: string }[]
+  >([])
   const [totalPrice, setTotalPrice] = useState('')
   const [paidAmount, setPaidAmount] = useState('')
   const [expectedDate, setExpectedDate] = useState('')
@@ -48,6 +51,26 @@ export function EditOrder() {
       setExpectedDate(data.expected_date ? data.expected_date.slice(0, 10) : '')
       setReminderNote(data.reminder_note || '')
       setStatus(data.status)
+
+      // загружаем позиции заказа
+      const { data: itemsData } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', data.id)
+        .order('created_at', { ascending: true })
+
+      if (itemsData && Array.isArray(itemsData)) {
+        setItems(
+          (itemsData as OrderItem[]).map((it) => ({
+            id: it.id,
+            item_name: it.item_name,
+            quantity: String(it.quantity),
+            unit_price: String(it.unit_price),
+          })),
+        )
+      } else {
+        setItems([{ item_name: '', quantity: '1', unit_price: '' }])
+      }
     }
     load()
   }, [id])
@@ -58,9 +81,29 @@ export function EditOrder() {
     setError(null)
     setLoading(true)
 
-    const price = parseFloat(totalPrice.replace(',', '.'))
+    const parsedItems = items
+      .map((it) => {
+        const qty = parseFloat(it.quantity.replace(',', '.')) || 0
+        const price = parseFloat(it.unit_price.replace(',', '.')) || 0
+        const lineTotal = qty * price
+        return {
+          id: it.id,
+          item_name: it.item_name.trim(),
+          quantity: qty,
+          unit_price: price,
+          line_total: lineTotal,
+        }
+      })
+      .filter((it) => it.item_name && it.quantity > 0 && it.unit_price >= 0)
+
+    const priceFromItems = parsedItems.reduce((sum, it) => sum + it.line_total, 0)
+
+    const price =
+      totalPrice.trim() !== ''
+        ? parseFloat(totalPrice.replace(',', '.'))
+        : priceFromItems
     if (isNaN(price) || price < 0) {
-      setError('Введите корректную стоимость')
+      setError('Введите корректную стоимость (через позиции или вручную)')
       setLoading(false)
       return
     }
@@ -92,6 +135,25 @@ export function EditOrder() {
         .eq('id', id)
 
       if (error) throw error
+
+      // сохраняем позиции: простая стратегия — удалить старые и вставить новые
+      const { error: deleteError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', id)
+      if (deleteError) throw deleteError
+
+      if (parsedItems.length > 0) {
+        const toInsert: OrderItemInsert[] = parsedItems.map((it) => ({
+          order_id: id,
+          item_name: it.item_name,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          line_total: it.line_total,
+        }))
+        const { error: insertError } = await supabase.from('order_items').insert(toInsert)
+        if (insertError) throw insertError
+      }
       navigate('/app')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения')
@@ -115,7 +177,14 @@ export function EditOrder() {
     )
   }
 
-  const priceNumber = parseFloat(totalPrice.replace(',', '.')) || 0
+  const priceFromItems = items.reduce((sum, it) => {
+    const qty = parseFloat(it.quantity.replace(',', '.')) || 0
+    const price = parseFloat(it.unit_price.replace(',', '.')) || 0
+    return sum + qty * price
+  }, 0)
+
+  const priceNumber =
+    (totalPrice.trim() !== '' ? parseFloat(totalPrice.replace(',', '.')) : priceFromItems) || 0
   const paidNumber = parseFloat(paidAmount.replace(',', '.')) || 0
   const debt = Math.max(priceNumber - paidNumber, 0)
 
@@ -131,6 +200,84 @@ export function EditOrder() {
             <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>
           )}
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Позиции заказа
+              </label>
+              <div className="space-y-2">
+                {items.map((item, index) => (
+                  <div
+                    key={item.id ?? index}
+                    className="grid grid-cols-1 sm:grid-cols-[2fr,0.75fr,0.75fr,0.75fr,auto] gap-2 items-end"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Название детали"
+                      value={item.item_name}
+                      onChange={(e) => {
+                        const next = [...items]
+                        next[index] = { ...next[index], item_name: e.target.value }
+                        setItems(next)
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Кол-во"
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const next = [...items]
+                        next[index] = { ...next[index], quantity: e.target.value }
+                        setItems(next)
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Цена"
+                      value={item.unit_price}
+                      onChange={(e) => {
+                        const next = [...items]
+                        next[index] = { ...next[index], unit_price: e.target.value }
+                        setItems(next)
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                    <div className="text-sm text-gray-700">
+                      {(
+                        (parseFloat(item.quantity.replace(',', '.')) || 0) *
+                        (parseFloat(item.unit_price.replace(',', '.')) || 0)
+                      ).toFixed(2)} ₽
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (items.length === 1) {
+                          setItems([{ item_name: '', quantity: '1', unit_price: '' }])
+                        } else {
+                          setItems(items.filter((_, i) => i !== index))
+                        }
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700 px-2 py-1"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setItems([
+                    ...items,
+                    { item_name: '', quantity: '1', unit_price: '' },
+                  ])
+                }
+                className="mt-2 text-xs text-blue-600 hover:text-blue-700"
+              >
+                + Добавить деталь
+              </button>
+            </div>
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
                 ФИО *
@@ -183,20 +330,19 @@ export function EditOrder() {
             </div>
             <div>
               <label htmlFor="parts" className="block text-sm font-medium text-gray-700 mb-1">
-                Запчасти *
+                Запчасти (общим текстом, не обязательно)
               </label>
               <textarea
                 id="parts"
                 value={parts}
                 onChange={(e) => setParts(e.target.value)}
-                required
                 rows={3}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
               <label htmlFor="totalPrice" className="block text-sm font-medium text-gray-700 mb-1">
-                Стоимость *
+                Стоимость (если пусто — считается из позиций)
               </label>
               <input
                 id="totalPrice"
