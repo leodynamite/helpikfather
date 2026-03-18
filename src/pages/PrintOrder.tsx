@@ -10,11 +10,13 @@ function OrderSlip({
   order,
   items,
   copyLabel,
+  includeClientTerms,
   settings,
 }: {
   order: Order
   items: OrderItem[]
   copyLabel: string
+  includeClientTerms?: boolean
   settings: UserSettings | null
 }) {
   const formattedDate = format(new Date(order.created_at), 'dd.MM.yyyy HH:mm', { locale: ru })
@@ -105,6 +107,41 @@ function OrderSlip({
           <span className="font-semibold">{debt.toLocaleString('ru-RU')} р</span>
         </div>
       </div>
+
+      {includeClientTerms && (
+        <div className="mt-2 text-[10px] leading-snug">
+          <div className="font-semibold mb-1">Условия поставки:</div>
+          <ol className="list-decimal pl-4 space-y-0.5">
+            <li>
+              Срок исполнения заказа от 5-дней в зависимости от доставки и наличии их на центральных
+              складах. Информация о наличии товара на складах предоставляется исполнителем в течении
+              3-4-х дней.
+            </li>
+            <li>
+              Заказ деталей, осуществленные по данным техпаспорта автомомбиля заказчика не
+              соотвествующим фактическим данным автомомбиля, исполнитель ответственности не несет.
+            </li>
+            <li>
+              При анулировании заказа начиная со следующего дня от даты заказа или возврате детали не
+              по вине исполнителя с заказчика производится удержание в сумме 50% от стоимости заказа.
+            </li>
+            <li>
+              Гарантию на запчасти установленные на станциях техобслуживания не имеющих
+              соотвествующую лицензию и сертификат исполнитель не дает!!!
+            </li>
+          </ol>
+          <div className="mt-2 flex justify-between items-end gap-4">
+            <div>
+              Данные верны, с условиями согласен: _____________________
+              <div className="text-[9px] mt-0.5 text-gray-600">(подпись заказчика)</div>
+            </div>
+            <div className="text-right">
+              Исполнитель: {executorName}
+              <div className="text-[9px] mt-0.5 text-gray-600">(подпись исполнителя)</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex justify-between text-[11px]">
         <div>
@@ -207,6 +244,7 @@ export function PrintOrder() {
           order={order}
           items={items}
           copyLabel="Экземпляр для клиента"
+          includeClientTerms
           settings={settings}
         />
         <OrderSlip
