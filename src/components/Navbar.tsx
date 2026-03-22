@@ -1,32 +1,8 @@
-import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 export function Navbar() {
   const navigate = useNavigate()
-  const [isAdmin, setIsAdmin] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    async function checkAdmin() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user || cancelled) return
-      const { data } = await supabase
-        .from('user_settings')
-        .select('is_admin')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      if (!cancelled && data && (data as { is_admin?: boolean }).is_admin === true) {
-        setIsAdmin(true)
-      }
-    }
-    checkAdmin()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   async function handleSignOut() {
     try {
@@ -53,14 +29,6 @@ export function Navbar() {
           <Link to="/settings" className="text-sm text-gray-600 hover:text-gray-900">
             Настройки
           </Link>
-          {isAdmin && (
-            <Link
-              to="/admin"
-              className="text-sm font-medium text-amber-800 hover:text-amber-900"
-            >
-              Админ
-            </Link>
-          )}
         </div>
         <div className="flex items-center gap-3">
           <Link
