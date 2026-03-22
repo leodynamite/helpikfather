@@ -12,6 +12,7 @@ import { Landing } from './pages/Landing'
 import { Customer } from './pages/Customer'
 import { Pipeline } from './pages/Pipeline'
 import { Analytics } from './pages/Analytics'
+import { Admin } from './pages/Admin'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
@@ -112,6 +113,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <Admin />
             </ProtectedRoute>
           }
         />
