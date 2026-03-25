@@ -30,6 +30,11 @@ create table if not exists order_items (
 
 alter table order_items enable row level security;
 
+drop policy if exists "Users can view own order items" on order_items;
+drop policy if exists "Users can insert own order items" on order_items;
+drop policy if exists "Users can update own order items" on order_items;
+drop policy if exists "Users can delete own order items" on order_items;
+
 create policy "Users can view own order items"
 on order_items for select
 using (
@@ -76,6 +81,11 @@ using (
 
 -- Row Level Security
 alter table orders enable row level security;
+
+drop policy if exists "Users can view own orders" on orders;
+drop policy if exists "Users can insert own orders" on orders;
+drop policy if exists "Users can update own orders" on orders;
+drop policy if exists "Users can delete own orders" on orders;
 
 create policy "Users can view own orders"
 on orders for select
