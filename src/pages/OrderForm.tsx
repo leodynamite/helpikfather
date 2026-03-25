@@ -107,7 +107,11 @@ export function OrderForm() {
       }
       navigate('/app', { state: { orderCreated: true } })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения')
+      if (err && typeof err === 'object' && 'message' in err) {
+        setError(String((err as { message?: unknown }).message ?? 'Ошибка сохранения'))
+      } else {
+        setError('Ошибка сохранения')
+      }
     } finally {
       setLoading(false)
     }
