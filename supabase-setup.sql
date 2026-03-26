@@ -1,4 +1,4 @@
-create table orders (
+create table if not exists orders (
   id uuid default uuid_generate_v4() primary key,
   created_at timestamp default now(),
   user_id uuid references auth.users not null,
@@ -10,6 +10,7 @@ create table orders (
   parts text not null,
   total_price numeric not null,
   paid_amount numeric default 0 not null,
+  payment_method text not null default 'cash',
   expected_date date,
   reminder_note text,
   vin text,
@@ -123,4 +124,10 @@ create policy "Users can upsert own settings"
 on user_settings for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+-- Добавляем форму оплаты в существующие таблицы (если скрипт выполняется повторно)
+alter table orders add column if not exists payment_method text;
+update orders set payment_method = 'cash' where payment_method is null;
+alter table orders alter column payment_method set default 'cash';
+alter table orders alter column payment_method set not null;
 

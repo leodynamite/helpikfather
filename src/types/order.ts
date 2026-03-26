@@ -1,5 +1,7 @@
 export type OrderStatus = 'new' | 'ordered' | 'received' | 'completed' | 'cancelled'
 
+export type PaymentMethod = 'cash' | 'card'
+
 export interface Order {
   id: string
   created_at: string
@@ -12,6 +14,7 @@ export interface Order {
   parts: string
   total_price: number
   paid_amount: number
+  payment_method: PaymentMethod | null
   expected_date: string | null
   reminder_note: string | null
   vin: string | null
@@ -46,6 +49,7 @@ export interface OrderInsert {
   parts: string
   total_price: number
   paid_amount?: number
+  payment_method?: PaymentMethod
   expected_date?: string | null
   reminder_note?: string | null
   vin?: string | null
@@ -61,6 +65,7 @@ export interface OrderUpdate {
   parts?: string
   total_price?: number
   paid_amount?: number
+  payment_method?: PaymentMethod
   expected_date?: string | null
   reminder_note?: string | null
   vin?: string | null

@@ -24,6 +24,7 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange }: Order
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Машина</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Сумма</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Оплачено</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Оплата</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Долг</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Действия</th>
@@ -57,6 +58,13 @@ export function OrderTable({ orders, onDelete, onRepeat, onStatusChange }: Order
                 <td className="px-4 py-3 text-sm text-gray-600">{order.car_model}</td>
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{total} ₽</td>
                 <td className="px-4 py-3 text-sm text-gray-700">{paid} ₽</td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {order.status === 'received'
+                    ? order.payment_method === 'card'
+                      ? 'Безналичный'
+                      : 'Наличный'
+                    : '—'}
+                </td>
                 <td className="px-4 py-3 text-sm">
                   {debt > 0 ? (
                     <span className="font-semibold text-red-600">{debt} ₽</span>

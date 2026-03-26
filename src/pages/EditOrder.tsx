@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Navbar } from '../components/Navbar'
-import type { Order, OrderStatus, OrderItem, OrderItemInsert } from '../types/order'
+import type { Order, OrderStatus, OrderItem, OrderItemInsert, PaymentMethod } from '../types/order'
 
 const STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'new', label: 'Новый' },
@@ -21,11 +21,13 @@ export function EditOrder() {
   const [carModel, setCarModel] = useState('')
   const [engine, setEngine] = useState('')
   const [parts, setParts] = useState('')
+  const [orderNumberInput, setOrderNumberInput] = useState<string>('')
   const [items, setItems] = useState<
     { id?: string; item_name: string; quantity: string; unit_price: string }[]
   >([])
   const [totalPrice, setTotalPrice] = useState('')
   const [paidAmount, setPaidAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [expectedDate, setExpectedDate] = useState('')
   const [reminderNote, setReminderNote] = useState('')
   const [status, setStatus] = useState<OrderStatus>('new')
@@ -48,6 +50,8 @@ export function EditOrder() {
       setParts(data.parts)
       setTotalPrice(String(data.total_price))
       setPaidAmount(String(data.paid_amount ?? 0))
+      setOrderNumberInput(String(data.order_number))
+      setPaymentMethod((data.payment_method ?? 'cash') as PaymentMethod)
       setExpectedDate(data.expected_date ? data.expected_date.slice(0, 10) : '')
       setReminderNote(data.reminder_note || '')
       setStatus(data.status)
@@ -117,6 +121,13 @@ export function EditOrder() {
       return
     }
 
+    const orderNumberValue = Number(orderNumberInput)
+    if (!orderNumberInput.trim() || !Number.isFinite(orderNumberValue) || !Number.isInteger(orderNumberValue) || orderNumberValue < 0) {
+      setError('Введите корректный номер заказа')
+      setLoading(false)
+      return
+    }
+
     try {
       const { error } = await supabase
         .from('orders')
@@ -126,8 +137,10 @@ export function EditOrder() {
           car_model: carModel.trim(),
           engine: engine.trim() || null,
           parts: parts.trim(),
+          order_number: orderNumberValue,
           total_price: price,
           paid_amount: paid,
+          payment_method: paymentMethod,
           expected_date: expectedDate || null,
           reminder_note: reminderNote.trim() || null,
           status,
@@ -296,6 +309,18 @@ export function EditOrder() {
               />
             </div>
             <div>
+              <label htmlFor="orderNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                Номер заказа
+              </label>
+              <input
+                id="orderNumber"
+                type="number"
+                value={orderNumberInput}
+                onChange={(e) => setOrderNumberInput(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                 Телефон
               </label>
@@ -353,7 +378,6 @@ export function EditOrder() {
                 type="text"
                 value={totalPrice}
                 onChange={(e) => setTotalPrice(e.target.value)}
-                required
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -369,6 +393,20 @@ export function EditOrder() {
                 placeholder="0"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
+            </div>
+            <div>
+              <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-1">
+                Форма оплаты
+              </label>
+              <select
+                id="paymentMethod"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="cash">Наличный</option>
+                <option value="card">Безналичный</option>
+              </select>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

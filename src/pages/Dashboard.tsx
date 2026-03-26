@@ -122,6 +122,7 @@ export function Dashboard() {
           engine: order.engine,
           parts: order.parts,
           total_price: order.total_price,
+          payment_method: order.payment_method ?? 'cash',
           status: 'new',
         })
         .select('*')
@@ -207,6 +208,7 @@ export function Dashboard() {
                 'Двигатель',
                 'Запчасти',
                 'Стоимость',
+                'Оплата',
                 'Статус',
               ]
               const rows = filteredOrders.map((o) => [
@@ -218,6 +220,11 @@ export function Dashboard() {
                 o.engine?.replace(/\r?\n/g, ' ') || '',
                 o.parts.replace(/\r?\n/g, ' '),
                 o.total_price,
+                o.status === 'received'
+                  ? o.payment_method === 'card'
+                    ? 'Безналичный'
+                    : 'Наличный'
+                  : '',
                 o.status,
               ])
               const csvLines = [header, ...rows]
@@ -232,9 +239,10 @@ export function Dashboard() {
                     })
                     .join(';'),
                 )
-                .join('\n')
+                .join('\r\n')
 
-              const blob = new Blob([csvLines], { type: 'text/csv;charset=utf-8;' })
+              // Excel часто неправильно определяет UTF-8, поэтому добавляем BOM.
+              const blob = new Blob([`\uFEFF${csvLines}`], { type: 'text/csv;charset=utf-8;' })
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
               a.href = url
@@ -442,6 +450,7 @@ export function Dashboard() {
                         parts: quickParts || '',
                         total_price: sum,
                         paid_amount: 0,
+                      payment_method: 'cash',
                         status: 'new',
                       })
                       .select('*')
