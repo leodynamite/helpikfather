@@ -116,6 +116,9 @@ create table if not exists user_settings (
 
 alter table user_settings enable row level security;
 
+drop policy if exists "Users can view own settings" on user_settings;
+drop policy if exists "Users can upsert own settings" on user_settings;
+
 create policy "Users can view own settings"
 on user_settings for select
 using (auth.uid() = user_id);
